@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: fluency-agent-literacy
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: RETELL_API_KEY
+        sync: false
+      - key: RETELL_AGENT_ID
+        sync: false

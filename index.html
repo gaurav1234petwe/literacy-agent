@@ -1,0 +1,1760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Fluency Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <!-- Retell Voice SDK (bundled at deploy time by build.mjs) -->
+  <script src="/retell-sdk.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:        #2563EB;
+      --blue-hover:  #1D4ED8;
+      --blue-light:  #EFF6FF;
+      --blue-border: #BFDBFE;
+      --orange:      #E8450A;
+      --navy:        #1E1B4B;
+      --text:        #111827;
+      --text-2:      #374151;
+      --text-3:      #6B7280;
+      --border:      #E5E7EB;
+      --bg:          #F3F4F6;
+      --white:       #FFFFFF;
+      --green:       #16A34A;
+      --green-bg:    #DCFCE7;
+      --red:         #DC2626;
+      --font:        'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── SCREEN MANAGEMENT ── */
+    .screen { display: none; }
+    .screen.active { display: flex; }
+
+    /* ══════════════════════════════════════
+       AI LOGO
+    ══════════════════════════════════════ */
+    .ai-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      user-select: none;
+    }
+    .ai-logo-mark {
+      width: 34px;
+      height: 34px;
+      background: var(--blue);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ai-logo-mark svg { width: 18px; height: 18px; }
+    .ai-logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .ai-logo-text span {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-3);
+      letter-spacing: 0.04em;
+    }
+
+    /* ══════════════════════════════════════
+       SCREEN 1 — ENTRY
+    ══════════════════════════════════════ */
+    #screen-entry {
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .entry-card {
+      background: var(--white);
+      border-radius: 16px;
+      box-shadow: 0 2px 24px rgba(0,0,0,0.08);
+      display: flex;
+      overflow: hidden;
+      width: 100%;
+      max-width: 880px;
+      min-height: 540px;
+    }
+
+    /* ── ILLUSTRATION PANEL ── */
+    .entry-illus {
+      width: 46%;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 0 0 44px;
+      background: linear-gradient(160deg, #0c1e3a 0%, #1e3a8a 50%, #0a1e38 100%);
+    }
+
+    .entry-illus::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 30%, rgba(37,99,235,0.25) 0%, transparent 65%);
+      pointer-events: none;
+    }
+
+    /* Central AI orb illustration */
+    .illus-orb-wrap {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+    .illus-orb {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #ffffff 0%, #c8d8f0 50%, #7baee8 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 60px rgba(37,99,235,0.4), 0 0 120px rgba(37,99,235,0.15);
+      position: relative;
+    }
+    .illus-orb::after {
+      content: '';
+      position: absolute;
+      inset: -10px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(37,99,235,0.25);
+      animation: orb-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes orb-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.5; }
+      50%       { transform: scale(1.08); opacity: 1; }
+    }
+    .illus-orb svg { width: 48px; height: 48px; color: var(--blue); }
+
+    /* Feature badges */
+    .illus-badges {
+      position: absolute;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .illus-badges.left  { left: 18px;  top: calc(50% + 40px); transform: translateY(-50%); }
+    .illus-badges.right { right: 18px; top: calc(50% + 40px); transform: translateY(-50%); }
+
+    .illus-badge {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px;
+      padding: 8px 11px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      backdrop-filter: blur(6px);
+      white-space: nowrap;
+    }
+    .badge-icon {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+    .badge-icon.orange { background: rgba(232,69,10,0.25); }
+    .badge-icon.blue   { background: rgba(37,99,235,0.30); }
+    .badge-icon.green  { background: rgba(22,163,74,0.25); }
+    .badge-text { display: flex; flex-direction: column; }
+    .badge-label {
+      font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.45);
+      letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; margin-bottom: 2px;
+    }
+    .badge-value { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.85); line-height: 1; }
+
+    /* Bottom copy */
+    .illus-copy {
+      position: relative; z-index: 4; text-align: center; padding: 0 32px;
+    }
+    .illus-copy-headline {
+      font-size: 20px; font-weight: 800; color: #FFFFFF; line-height: 1.25;
+      margin-bottom: 10px; letter-spacing: -0.3px;
+    }
+    .illus-copy-headline em { font-style: normal; color: #E8450A; }
+    .illus-copy-sub {
+      font-size: 12.5px; font-weight: 400; color: rgba(255,255,255,0.45); line-height: 1.7;
+    }
+
+    /* Form panel */
+    .entry-form-wrap {
+      flex: 1; padding: 52px 48px; display: flex; flex-direction: column; justify-content: center;
+    }
+    .entry-logo-wrap {
+      display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 36px;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block; font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px;
+    }
+    .form-group input {
+      width: 100%; padding: 12px 16px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: var(--font); font-size: 15px; color: var(--text); background: var(--bg);
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    .form-group input:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); background: var(--white);
+    }
+    .form-group input::placeholder { color: var(--text-3); }
+
+    .consent-row {
+      display: flex; align-items: flex-start; gap: 10px; margin-bottom: 28px; margin-top: 4px;
+    }
+    .consent-row input[type="checkbox"] {
+      width: 17px; height: 17px; flex-shrink: 0; margin-top: 2px;
+      accent-color: var(--blue); cursor: pointer;
+    }
+    .consent-row label { font-size: 13px; color: var(--text-3); line-height: 1.6; cursor: pointer; }
+
+    .btn-primary {
+      width: 100%; padding: 14px; background: var(--blue); color: white; border: none;
+      border-radius: 8px; font-family: var(--font); font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s, transform 0.1s;
+    }
+    .btn-primary:hover { background: var(--blue-hover); }
+    .btn-primary:active { transform: scale(0.995); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ══════════════════════════════════════
+       SCREEN 2 — SETUP
+    ══════════════════════════════════════ */
+    #screen-setup {
+      min-height: 100vh; align-items: center; justify-content: center; padding: 32px 16px;
+    }
+    .setup-card {
+      background: var(--white); border-radius: 16px; box-shadow: 0 2px 24px rgba(0,0,0,0.08);
+      width: 100%; max-width: 820px; padding: 52px 56px;
+    }
+    .setup-card h1 {
+      font-size: 26px; font-weight: 700; color: var(--blue); text-align: center;
+      margin-bottom: 12px; line-height: 1.3;
+    }
+    .setup-subtitle {
+      text-align: center; color: var(--text-3); font-size: 14.5px; line-height: 1.7; margin-bottom: 32px;
+    }
+    .setup-subtitle strong { color: var(--blue); font-weight: 600; }
+
+    /* Tabs */
+    .setup-tabs {
+      display: flex; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 28px;
+    }
+    .setup-tab {
+      flex: 1; padding: 13px 16px; text-align: center; font-size: 14px; font-weight: 500;
+      cursor: pointer; background: var(--bg); border: none; font-family: var(--font);
+      color: var(--text-3); transition: all 0.2s; display: flex; align-items: center;
+      justify-content: center; gap: 7px;
+    }
+    .setup-tab.active { background: var(--white); color: var(--blue); font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Device ready panel */
+    .device-check-wrap { display: flex; gap: 20px; align-items: stretch; }
+    .avatar-box {
+      width: 180px; height: 160px; background: var(--bg); border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .avatar-circle {
+      width: 64px; height: 64px; border-radius: 50%; background: var(--blue);
+      display: flex; align-items: center; justify-content: center; color: white;
+      font-size: 24px; font-weight: 700;
+    }
+    .mic-status-card {
+      flex: 1; border: 1.5px solid var(--border); border-radius: 10px; padding: 20px 22px;
+      display: flex; align-items: flex-start; gap: 14px;
+    }
+    .mic-icon-wrap {
+      width: 44px; height: 44px; border-radius: 50%; background: var(--blue-light);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mic-icon-wrap svg { width: 20px; height: 20px; color: var(--blue); }
+    .mic-status-text strong { display: block; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .mic-badge {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 13px;
+      color: var(--green); font-weight: 500; margin-bottom: 6px;
+    }
+    .mic-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .mic-hint { font-size: 13px; color: var(--text-3); }
+
+    /* Tips panel */
+    .tips-hint { text-align: center; font-size: 13.5px; color: var(--text-3); margin-bottom: 16px; }
+    .tips-box {
+      border-left: 3px solid var(--blue); background: #FAFBFF; border-radius: 0 10px 10px 0; padding: 22px 26px;
+    }
+    .tips-box h3 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 16px; }
+    .tip-item {
+      display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px;
+      font-size: 14px; color: var(--text-2); line-height: 1.55;
+    }
+    .tip-item:last-child { margin-bottom: 0; }
+    .tip-check { width: 18px; height: 18px; flex-shrink: 0; color: var(--blue); margin-top: 1px; }
+
+    .setup-footer { display: flex; justify-content: flex-end; margin-top: 28px; }
+    .btn-proceed {
+      padding: 12px 26px; background: var(--blue); color: white; border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: background 0.2s;
+    }
+    .btn-proceed:hover { background: var(--blue-hover); }
+
+    /* ══════════════════════════════════════
+       SCREEN 3 — CHAT INTERVIEW
+    ══════════════════════════════════════ */
+    #screen-interview {
+      flex-direction: column; height: 100vh; overflow: hidden; background: var(--white);
+    }
+    .interview-header {
+      padding: 16px 32px; display: flex; align-items: flex-start; justify-content: space-between;
+      flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--white);
+    }
+    .interview-header-left { display: flex; flex-direction: column; gap: 3px; }
+    .interview-session-label { font-size: 13px; font-weight: 600; color: var(--text-2); }
+    .btn-end {
+      padding: 9px 20px; background: transparent; border: 1.5px solid var(--border);
+      border-radius: 8px; font-family: var(--font); font-size: 14px; font-weight: 500;
+      color: var(--text); cursor: pointer; transition: all 0.2s;
+    }
+    .btn-end:hover { border-color: var(--red); color: var(--red); }
+
+    /* Interview body */
+    .interview-body {
+      flex: 1; display: flex; padding: 28px 32px; gap: 28px;
+      overflow: hidden; min-height: 0;
+    }
+
+    /* ── AI AVATAR SIDE ── */
+    .viz-side {
+      flex: 0 0 42%; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 20px;
+      align-self: stretch; /* fill column height */
+      overflow: hidden;    /* never scroll */
+    }
+    .viz-container {
+      width: 100%; max-width: 420px; aspect-ratio: 4/3;
+      background: linear-gradient(160deg, #0c1e3a 0%, #132f50 45%, #0a1e38 100%);
+      border-radius: 14px; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .viz-container::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% 45%, rgba(255,255,255,0.06) 0%, transparent 60%),
+                  radial-gradient(ellipse at 20% 80%, rgba(37,99,235,0.12) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .viz-orb {
+      width: 180px; height: 180px; border-radius: 50%;
+      background: radial-gradient(circle at 40% 35%, #ffffff 0%, #e8eef8 55%, #c8d5ed 100%);
+      display: flex; align-items: center; justify-content: center; position: relative;
+      z-index: 2;
+      box-shadow: 0 0 60px rgba(255,255,255,0.18), 0 0 120px rgba(255,255,255,0.08);
+    }
+
+    /* Thinking dots (replacing voice waveform) */
+    .ai-dots {
+      display: flex; align-items: center; gap: 6px; height: 40px;
+    }
+    .ai-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--blue);
+      opacity: 0.4;
+    }
+    .ai-dots.thinking .ai-dot {
+      animation: dot-bounce 1.2s ease-in-out infinite;
+    }
+    .ai-dot:nth-child(1) { animation-delay: 0s; }
+    .ai-dot:nth-child(2) { animation-delay: 0.15s; }
+    .ai-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes dot-bounce {
+      0%, 100% { transform: translateY(0); opacity: 0.4; }
+      50%       { transform: translateY(-8px); opacity: 1; }
+    }
+    .ai-dots.idle .ai-dot { opacity: 0.2; }
+    .ai-dots.active .ai-dot {
+      animation: dot-pulse 2s ease-in-out infinite;
+    }
+    @keyframes dot-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50%       { opacity: 0.8; transform: scale(1.15); }
+    }
+
+    /* Status pill */
+    .status-pill {
+      position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.10); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.14); border-radius: 20px;
+      padding: 7px 16px; font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.88);
+      display: flex; align-items: center; gap: 8px; white-space: nowrap; z-index: 3;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #9CA3AF; flex-shrink: 0; }
+    .status-dot.active  { background: var(--green); animation: blink 1.2s ease-in-out infinite; }
+    .status-dot.thinking { background: #60A5FA; animation: blink 0.8s ease-in-out infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    .btn-start-interview {
+      padding: 12px 32px; background: var(--blue); color: white; border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+    .btn-start-interview:hover { background: var(--blue-hover); }
+    .btn-start-interview:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── CHAT SIDE ── */
+    .transcript-side {
+      flex: 1; display: flex; flex-direction: column; border: 1px solid var(--border);
+      border-radius: 12px; background: var(--white); overflow: hidden; min-height: 0;
+    }
+    .transcript-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700;
+      color: var(--text); flex-shrink: 0;
+    }
+    .transcript-header svg { width: 17px; height: 17px; color: var(--blue); }
+
+    .transcript-body {
+      flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column;
+      gap: 14px; min-height: 0;
+    }
+    .transcript-empty { color: var(--text-3); font-size: 14px; line-height: 1.7; padding: 4px; }
+
+    /* Chat message bubbles */
+    .chat-message {
+      display: flex; flex-direction: column; gap: 4px;
+      animation: fade-up 0.25s ease;
+    }
+    /* Tara (agent) LEFT · Candidate (user) RIGHT */
+    .chat-message.agent { align-items: flex-start; }
+    .chat-message.user  { align-items: flex-end; }
+
+    @keyframes fade-up {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .chat-label {
+      font-size: 11.5px; font-weight: 600; color: var(--text-3); padding: 0 4px;
+    }
+    .chat-bubble {
+      padding: 10px 14px; font-size: 14.5px; line-height: 1.6; max-width: 82%; word-wrap: break-word;
+    }
+    /* Tara bubble — LEFT, neutral style */
+    .chat-bubble.agent {
+      background: var(--blue-light); color: var(--text);
+      border-radius: 12px 12px 12px 0; border: 1px solid var(--blue-border);
+    }
+    /* Candidate bubble — RIGHT, primary blue */
+    .chat-bubble.user {
+      background: var(--blue); color: white; border-radius: 12px 12px 0 12px;
+    }
+
+    /* Chat input area */
+    .chat-input-area {
+      padding: 12px 16px; border-top: 1px solid var(--border);
+      align-items: flex-end; gap: 8px; background: var(--white); flex-shrink: 0;
+    }
+    .chat-input-area.visible { display: flex; }
+    .chat-input-textarea {
+      flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: var(--font); font-size: 14px; color: var(--text); resize: none;
+      outline: none; line-height: 1.5; min-height: 44px; max-height: 120px;
+      overflow-y: auto; transition: border-color 0.2s, box-shadow 0.2s;
+      background: var(--bg);
+    }
+    .chat-input-textarea:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); background: var(--white);
+    }
+    .chat-input-textarea::placeholder { color: var(--text-3); }
+    .chat-input-textarea:disabled { opacity: 0.6; }
+
+    .btn-send {
+      padding: 10px 18px; background: var(--blue); color: white; border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s; white-space: nowrap; min-height: 44px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .btn-send:hover { background: var(--blue-hover); }
+    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ══════════════════════════════════════
+       MODAL
+    ══════════════════════════════════════ */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--white); border-radius: 14px; padding: 32px; max-width: 420px;
+      width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    }
+    .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .modal p  { font-size: 14px; color: var(--text-3); line-height: 1.6; margin-bottom: 24px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+    .btn-cancel {
+      padding: 10px 22px; border: 1.5px solid var(--border); border-radius: 8px;
+      background: transparent; font-family: var(--font); font-size: 14px;
+      cursor: pointer; color: var(--text-2); transition: border-color 0.2s;
+    }
+    .btn-cancel:hover { border-color: var(--text-3); }
+    .btn-confirm-end {
+      padding: 10px 22px; background: var(--blue); color: white; border: none; border-radius: 8px;
+      font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-confirm-end:hover { background: var(--blue-hover); }
+
+    /* ══════════════════════════════════════
+       SCREEN 4 — FEEDBACK
+    ══════════════════════════════════════ */
+    #screen-feedback {
+      min-height: 100vh; align-items: flex-start; justify-content: center;
+      padding: 48px 16px; background: var(--bg);
+    }
+    .feedback-card {
+      background: var(--white); border-radius: 16px; box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+      width: 100%; max-width: 680px; padding: 52px 56px;
+    }
+    .feedback-logo-wrap { display: flex; justify-content: center; margin-bottom: 28px; }
+    .feedback-card h2 {
+      font-size: 24px; font-weight: 700; text-align: center; color: var(--text); margin-bottom: 40px;
+    }
+    .feedback-question { margin-bottom: 36px; }
+    .feedback-question:last-of-type { margin-bottom: 0; }
+    .feedback-question p {
+      font-size: 15px; font-weight: 500; color: var(--text-2); margin-bottom: 14px; line-height: 1.55;
+    }
+    .stars { display: flex; gap: 10px; }
+    .star { font-size: 32px; cursor: pointer; color: #D1D5DB; transition: color 0.15s, transform 0.1s; line-height: 1; }
+    .star:hover, .star.active { color: #F59E0B; }
+    .star:hover { transform: scale(1.1); }
+    .feedback-divider { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+    .btn-submit {
+      width: 100%; padding: 14px; background: var(--blue); color: white; border: none;
+      border-radius: 8px; font-family: var(--font); font-size: 15px; font-weight: 600;
+      cursor: pointer; margin-top: 40px; transition: background 0.2s;
+    }
+    .btn-submit:hover { background: var(--blue-hover); }
+
+    /* ══════════════════════════════════════
+       SCREEN 5 — THANK YOU
+    ══════════════════════════════════════ */
+    #screen-thankyou {
+      min-height: 100vh; align-items: center; justify-content: center;
+      padding: 32px 16px; background: var(--bg);
+    }
+    .thankyou-card {
+      background: var(--white); border-radius: 16px; box-shadow: 0 2px 24px rgba(0,0,0,0.07);
+      width: 100%; max-width: 520px; padding: 56px 48px; text-align: center;
+    }
+    .thankyou-logo-wrap { display: flex; justify-content: center; margin-bottom: 32px; }
+    .thankyou-check {
+      width: 68px; height: 68px; border-radius: 50%; background: var(--blue-light);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 24px;
+    }
+    .thankyou-check svg { width: 32px; height: 32px; color: var(--blue); }
+    .thankyou-card h2 { font-size: 26px; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+    .thankyou-card p { color: var(--text-3); font-size: 15px; line-height: 1.75; margin-bottom: 12px; }
+    .thankyou-card p:last-of-type { margin-bottom: 0; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #111827; color: white; padding: 11px 22px; border-radius: 8px;
+      font-size: 14px; z-index: 200; transition: transform 0.3s ease; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── DASHBOARD LINK ── */
+    .dashboard-link {
+      display: block; font-size: 13px; color: #9AA0B0; text-decoration: none;
+      cursor: pointer; background: none; border: none; font-family: var(--font);
+      padding: 0; margin-top: 14px;
+    }
+    .dashboard-link:hover { text-decoration: underline; }
+
+    /* ── DASHBOARD MODAL ── */
+    .dashboard-modal-box {
+      width: 92vw; height: 90vh; background: white; border-radius: 16px;
+      overflow-y: auto; padding: 0; position: relative;
+    }
+    .dashboard-close-btn {
+      position: sticky; top: 16px; float: right; margin: 16px 16px 0 0;
+      width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.08);
+      border: none; cursor: pointer; font-size: 16px; display: flex;
+      align-items: center; justify-content: center; z-index: 1000; flex-shrink: 0;
+    }
+    .dashboard-close-btn:hover { background: rgba(0,0,0,0.15); }
+
+    /* ── DASHBOARD SCOPED STYLES ── */
+    .dash-scope {
+      --blue: #1A2B5F; --blue-mid: #2D4A9A; --blue-light: #EEF2FF;
+      --orange: #E8450A; --text: #1A1A2E; --text-sec: #5A6070; --text-muted: #9AA0B0;
+      --border: #E2E6F0; --white: #fff; --bg: #F4F6FA;
+      --green: #16A34A; --green-light: #DCFCE7;
+      --red: #DC2626; --red-light: #FEE2E2;
+      --amber: #D97706; --amber-light: #FEF3C7;
+      --info-light: #EEF2FF;
+      --font: 'DM Sans', sans-serif;
+      font-family: var(--font); background: var(--white); color: var(--text); padding: 32px 24px;
+    }
+    .dash-scope .page{max-width:1100px;margin:0 auto;}
+    .dash-scope .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+    .dash-scope .header-left{display:flex;align-items:center;gap:16px;}
+    .dash-scope .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:20px;color:var(--text);}
+    .dash-scope .logo-icon{width:28px;height:28px;}
+    .dash-scope .title-block h1{font-size:18px;font-weight:600;color:var(--text);}
+    .dash-scope .title-block p{font-size:13px;color:var(--text-sec);margin-top:2px;}
+    .dash-scope .demo-badge{background:var(--amber-light);color:var(--amber);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid #FCD34D;}
+    .dash-scope .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
+    .dash-scope .kpi{background:var(--white);border:1px solid #D0D5E0;border-radius:12px;padding:16px;box-shadow:0 1px 6px rgba(0,0,0,0.09);}
+    .dash-scope .kpi-label{font-size:12px;color:var(--text-sec);margin-bottom:8px;}
+    .dash-scope .kpi-value{font-size:26px;font-weight:600;line-height:1;}
+    .dash-scope .kpi-sub{font-size:11px;margin-top:6px;}
+    .dash-scope .kpi-sub.up{color:var(--red);}
+    .dash-scope .kpi-sub.down{color:var(--green);}
+    .dash-scope .kpi-sub.neutral{color:var(--text-muted);}
+    .dash-scope .kpi-sub.warn{color:var(--amber);}
+    .dash-scope .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+    .dash-scope .card{background:var(--white);border:1px solid #D0D5E0;border-radius:14px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.09);}
+    .dash-scope .card-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+    .dash-scope .card-sub{font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;}
+    .dash-scope .legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;}
+    .dash-scope .legend span{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-sec);}
+    .dash-scope .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+    .dash-scope .chart-wrap{position:relative;width:100%;}
+    .dash-scope .workload-bar{display:flex;border-radius:8px;overflow:hidden;height:38px;margin-bottom:10px;}
+    .dash-scope .wl-seg{display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;}
+    .dash-scope .insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px;}
+    .dash-scope .insight{border-radius:10px;padding:14px;border-left:3px solid transparent;}
+    .dash-scope .insight.red{background:var(--red-light);border-left-color:var(--red);}
+    .dash-scope .insight.amber{background:var(--amber-light);border-left-color:var(--amber);}
+    .dash-scope .insight.blue{background:var(--info-light);border-left-color:var(--blue-mid);}
+    .dash-scope .insight.green{background:var(--green-light);border-left-color:var(--green);}
+    .dash-scope .insight-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:5px;}
+    .dash-scope .insight.red .insight-title{color:var(--red);}
+    .dash-scope .insight.amber .insight-title{color:var(--amber);}
+    .dash-scope .insight.blue .insight-title{color:var(--blue-mid);}
+    .dash-scope .insight.green .insight-title{color:var(--green);}
+    .dash-scope .insight p{font-size:12px;color:var(--text-sec);line-height:1.6;}
+    .dash-scope .footer-note{font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:14px;line-height:1.7;}
+    @media(max-width:700px){.dash-scope .charts-grid,.dash-scope .insight-grid{grid-template-columns:1fr;}}
+    .dash-scope .filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+    .dash-scope .filter-group{display:flex;align-items:center;gap:6px;}
+    .dash-scope .filter-label{font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-right:2px;white-space:nowrap;}
+    .dash-scope .pill{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-family:var(--font);cursor:pointer;color:var(--text);transition:all 0.15s;}
+    .dash-scope .pill:hover{border-color:var(--blue-mid);}
+    .dash-scope .pill.active{background:var(--blue);border-color:var(--blue);color:var(--white);}
+    .dash-scope .filter-select{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;font-family:var(--font);color:var(--text);cursor:pointer;outline:none;}
+    .dash-scope .filter-select:focus{border-color:var(--blue-mid);}
+
+    /* ── MIC CHECK (SETUP) ── */
+    .mic-check-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; border: 1.5px solid var(--border); border-radius: 10px;
+      margin-bottom: 22px; background: var(--bg);
+    }
+    .mic-check-icon {
+      width: 40px; height: 40px; border-radius: 50%; background: var(--blue-light);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .mic-check-icon svg { width: 18px; height: 18px; color: var(--blue); }
+    .mic-check-info { flex: 1; }
+    .mic-check-info strong { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    #mic-status-badge { font-size: 13px; color: var(--text-3); }
+    .btn-test-mic {
+      padding: 8px 16px; border: 1.5px solid var(--border); border-radius: 8px;
+      background: var(--white); font-family: var(--font); font-size: 13px; font-weight: 500;
+      cursor: pointer; color: var(--text-2); transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-test-mic:hover { border-color: var(--blue); color: var(--blue); }
+    .btn-test-mic:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* ── VOICE CONTROLS (SCREEN 3) ── */
+    .voice-controls {
+      flex-direction: column; align-items: center; gap: 12px;
+    }
+    .btn-mute {
+      padding: 11px 24px; border: 1.5px solid var(--border); border-radius: 50px;
+      background: var(--white); font-family: var(--font); font-size: 14px; font-weight: 600;
+      cursor: pointer; color: var(--text); transition: all 0.2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-mute:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+    .btn-mute.muted {
+      background: rgba(220,38,38,0.08); border-color: var(--red); color: var(--red);
+    }
+    .btn-mute.muted:hover { background: rgba(220,38,38,0.15); }
+    .voice-hint {
+      font-size: 12.5px; color: var(--text-3); text-align: center; line-height: 1.5;
+    }
+
+    /* ── VOICE WAVE (orb animation during speech) ── */
+    @keyframes orb-speak {
+      0%, 100% { box-shadow: 0 0 60px rgba(255,255,255,0.18), 0 0 120px rgba(255,255,255,0.08); transform: scale(1); }
+      25%       { box-shadow: 0 0 80px rgba(37,99,235,0.55), 0 0 160px rgba(37,99,235,0.25); transform: scale(1.04); }
+      75%       { box-shadow: 0 0 70px rgba(37,99,235,0.35), 0 0 140px rgba(37,99,235,0.15); transform: scale(1.02); }
+    }
+    .viz-orb.speaking {
+      animation: orb-speak 0.8s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     SCREEN 1 — ENTRY
+══════════════════════════════════════ -->
+<div id="screen-entry" class="screen active">
+  <div class="entry-card">
+
+    <!-- Illustration panel -->
+    <div class="entry-illus">
+
+      <!-- AI orb illustration -->
+      <div class="illus-orb-wrap">
+        <div class="illus-orb">
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="20" fill="rgba(37,99,235,0.12)"/>
+            <path d="M16 24L20 18L24 24L20 30L16 24Z" fill="#2563EB"/>
+            <path d="M24 16L32 24L24 32L27 24L24 16Z" fill="rgba(37,99,235,0.65)"/>
+            <circle cx="24" cy="24" r="4" fill="#2563EB"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Left badges -->
+      <div class="illus-badges left">
+        <div class="illus-badge">
+          <div class="badge-icon orange">🔒</div>
+          <div class="badge-text">
+            <span class="badge-label">Privacy</span>
+            <span class="badge-value">Confidential</span>
+          </div>
+        </div>
+        <div class="illus-badge">
+          <div class="badge-icon green">✓</div>
+          <div class="badge-text">
+            <span class="badge-label">Format</span>
+            <span class="badge-value">Voice-based</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right badges -->
+      <div class="illus-badges right">
+        <div class="illus-badge">
+          <div class="badge-icon blue">⏱</div>
+          <div class="badge-text">
+            <span class="badge-label">Duration</span>
+            <span class="badge-value">~20 minutes</span>
+          </div>
+        </div>
+        <div class="illus-badge">
+          <div class="badge-icon blue">✦</div>
+          <div class="badge-text">
+            <span class="badge-label">Powered by</span>
+            <span class="badge-value">iMocha Agent</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom copy -->
+      <div class="illus-copy">
+        <div class="illus-copy-headline">AI <em>Fluency</em> Assessment</div>
+        <div class="illus-copy-sub">Voice-based conversational AI Agent<br>designed to evaluate AI fluency</div>
+      </div>
+
+    </div>
+
+    <!-- Form panel -->
+    <div class="entry-form-wrap">
+      <div class="entry-logo-wrap">
+        <a class="ai-logo" href="#">
+          <div class="ai-logo-mark">
+            <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5 9L7.5 5.5L10 9L7.5 12.5L5 9Z" fill="white"/>
+              <path d="M9 4L14 9L9 14L11 9L9 4Z" fill="rgba(255,255,255,0.75)"/>
+            </svg>
+          </div>
+          <div class="ai-logo-text">
+            AI Fluency
+          </div>
+        </a>
+      </div>
+
+      <div class="form-group">
+        <label for="input-name">Full Name</label>
+        <input type="text" id="input-name" placeholder="Enter your full name" autocomplete="name" />
+      </div>
+
+      <div class="consent-row">
+        <input type="checkbox" id="consent-check" checked />
+        <label for="consent-check">
+          I agree to the processing of my personal data (name and voice responses) for the purpose of this AI fluency assessment.
+        </label>
+      </div>
+
+      <button class="btn-primary" id="btn-entry-proceed" onclick="proceedToSetup()">
+        Continue
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN 2 — SETUP
+══════════════════════════════════════ -->
+<div id="screen-setup" class="screen">
+  <div class="setup-card">
+    <h1>Welcome to Your AI Fluency Assessment</h1>
+    <p class="setup-subtitle">
+      This session is powered by iMocha's conversational AI agent and is carefully crafted to help evaluate your AI fluency. Your responses will remain confidential. <span id="setup-name-display" style="display:none;"></span>
+    </p>
+
+    <!-- Microphone check -->
+    <div class="mic-check-row">
+      <div class="mic-check-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+      </div>
+      <div class="mic-check-info">
+        <strong>Microphone Access</strong>
+        <span id="mic-status-badge">Required for this voice session</span>
+      </div>
+      <button class="btn-test-mic" id="btn-check-mic" onclick="checkMicPermission()">Test Mic</button>
+    </div>
+
+    <!-- Session Guide (single panel, no tabs) -->
+    <div id="panel-tips">
+      <div class="tips-box">
+        <h3>Before You Begin</h3>
+        <div class="tip-item">
+          <svg class="tip-check" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Speak naturally — respond as you would in a real conversation.
+        </div>
+        <div class="tip-item">
+          <svg class="tip-check" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Be honest — your genuine responses give the most accurate assessment.
+        </div>
+        <div class="tip-item">
+          <svg class="tip-check" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Use complete sentences and take your time when answering.
+        </div>
+        <div class="tip-item">
+          <svg class="tip-check" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Allow microphone access when prompted — your audio is processed securely.
+        </div>
+        <div class="tip-item">
+          <svg class="tip-check" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          Find a quiet environment for the clearest audio quality.
+        </div>
+        <div class="tip-item">
+          <svg class="tip-check" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm3.707-9.293a1 1 0 0 0-1.414-1.414L9 10.586 7.707 9.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          This session takes approximately 20 minutes.
+        </div>
+      </div>
+    </div><!-- end panel-tips -->
+
+    <div class="setup-footer">
+      <button class="btn-proceed" onclick="proceedToInterview()">
+        Proceed
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN 3 — CHAT INTERVIEW
+══════════════════════════════════════ -->
+<div id="screen-interview" class="screen">
+
+  <div class="interview-header">
+    <div class="interview-header-left">
+      <a class="ai-logo" href="#">
+        <div class="ai-logo-mark">
+          <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 9L7.5 5.5L10 9L7.5 12.5L5 9Z" fill="white"/>
+            <path d="M9 4L14 9L9 14L11 9L9 4Z" fill="rgba(255,255,255,0.75)"/>
+          </svg>
+        </div>
+        <div class="ai-logo-text">
+          AI Fluency
+        </div>
+      </a>
+      <span class="interview-session-label" id="interview-session-label">AI Fluency Assessment</span>
+    </div>
+    <button class="btn-end" onclick="requestEndInterview()">End Session</button>
+  </div>
+
+  <div class="interview-body">
+
+    <!-- AI Avatar / Status side -->
+    <div class="viz-side">
+      <div class="viz-container" id="viz-container">
+        <div class="viz-orb">
+          <div class="ai-dots idle" id="ai-dots">
+            <div class="ai-dot"></div>
+            <div class="ai-dot"></div>
+            <div class="ai-dot"></div>
+          </div>
+        </div>
+        <div class="status-pill">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Ready to begin</span>
+        </div>
+      </div>
+
+      <button class="btn-start-interview" id="btn-start-interview" onclick="startCall()">
+        Start Call
+      </button>
+
+      <!-- Voice controls — shown when call is active -->
+      <div class="voice-controls" id="voice-controls" style="display:none;">
+        <button class="btn-mute" id="btn-mute" onclick="toggleMute()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+          </svg>
+          Mute Mic
+        </button>
+        <span class="voice-hint" id="voice-hint">Speak naturally — Tara is listening</span>
+      </div>
+    </div>
+
+    <!-- Live voice transcript -->
+    <div class="transcript-side">
+      <div class="transcript-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px;color:var(--blue)">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+        Live Transcript
+      </div>
+      <div class="transcript-body" id="transcript-body">
+        <p class="transcript-empty">Voice transcript will appear here once the call starts.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- END SESSION MODAL -->
+<div class="modal-overlay" id="end-modal">
+  <div class="modal">
+    <h3>End Session?</h3>
+    <p>Are you sure you want to end the session? This action cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm-end" onclick="confirmEnd()">End Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN 4 — FEEDBACK
+══════════════════════════════════════ -->
+<div id="screen-feedback" class="screen">
+  <div class="feedback-card">
+    <div class="feedback-logo-wrap">
+      <a class="ai-logo" href="#">
+        <div class="ai-logo-mark">
+          <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 9L7.5 5.5L10 9L7.5 12.5L5 9Z" fill="white"/>
+            <path d="M9 4L14 9L9 14L11 9L9 4Z" fill="rgba(255,255,255,0.75)"/>
+          </svg>
+        </div>
+        <div class="ai-logo-text">AI Fluency</div>
+      </a>
+    </div>
+
+    <h2>Session Feedback</h2>
+    <div id="feedback-questions"></div>
+    <button class="btn-submit" onclick="submitFeedback()">Submit Feedback</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCREEN 5 — THANK YOU
+══════════════════════════════════════ -->
+<div id="screen-thankyou" class="screen">
+  <div class="thankyou-card">
+    <div class="thankyou-logo-wrap">
+      <a class="ai-logo" href="#">
+        <div class="ai-logo-mark">
+          <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 9L7.5 5.5L10 9L7.5 12.5L5 9Z" fill="white"/>
+            <path d="M9 4L14 9L9 14L11 9L9 4Z" fill="rgba(255,255,255,0.75)"/>
+          </svg>
+        </div>
+        <div class="ai-logo-text">AI Fluency</div>
+      </a>
+    </div>
+
+    <div class="thankyou-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </svg>
+    </div>
+
+    <h2>Thank You, <span id="thankyou-name">there</span></h2>
+    <p>Your assessment has been completed. We appreciate your time, and would want to wish you the very best!</p>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- DASHBOARD MODAL -->
+<div id="dashboard-modal" style="position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;">
+  <div class="dashboard-modal-box">
+    <button class="dashboard-close-btn" onclick="closeDashboard()">&#x2715;</button>
+    <div class="dash-scope">
+      <div class="page">
+
+        <div class="header">
+          <div class="header-left">
+            <div class="logo">
+              <svg class="logo-icon" viewBox="0 0 28 28" fill="none">
+                <rect width="28" height="28" rx="6" fill="#1A2B5F"/>
+                <path d="M8 14L11 9.5L14 14L11 18.5L8 14Z" fill="white"/>
+                <path d="M14 7L20 14L14 21L16.5 14L14 7Z" fill="rgba(255,255,255,0.7)"/>
+              </svg>
+              AI Fluency
+            </div>
+            <div class="title-block">
+              <h1>Fluency Assessment Analytics</h1>
+              <p>Jan 2023 – Dec 2024</p>
+            </div>
+          </div>
+          <span class="demo-badge">Illustrative demo data</span>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-label">Total assessments (2yr)</div>
+            <div class="kpi-value" id="kpi-exits">1,847</div>
+            <div class="kpi-sub neutral">of ~21,000 workforce</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Avg fluency score</div>
+            <div class="kpi-value" id="kpi-attrition">72%</div>
+            <div class="kpi-sub down">↑ 4pp vs last year</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Avg session duration</div>
+            <div class="kpi-value" id="kpi-tenure">18 min</div>
+            <div class="kpi-sub neutral">within target range</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Completion rate</div>
+            <div class="kpi-value" id="kpi-completion">87%</div>
+            <div class="kpi-sub down">↑ 6pp vs baseline</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">High proficiency</div>
+            <div class="kpi-value" id="kpi-safety">34%</div>
+            <div class="kpi-sub neutral">B2+ level achieved</div>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="filter-group">
+            <span class="filter-label">Year</span>
+            <button class="pill active" data-filter="year" data-value="both" onclick="setPill(this,'year')">Both</button>
+            <button class="pill" data-filter="year" data-value="2023" onclick="setPill(this,'year')">2023</button>
+            <button class="pill" data-filter="year" data-value="2024" onclick="setPill(this,'year')">2024</button>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Department</span>
+            <select class="filter-select" id="dept-filter" onchange="applyFilters()">
+              <option value="all">All Departments</option>
+              <option value="ground-ops">Operations</option>
+              <option value="cabin-crew">Customer Success</option>
+              <option value="customer-service">Product & Engineering</option>
+              <option value="engineering">Marketing</option>
+              <option value="corporate">Finance</option>
+              <option value="flight-ops">HR & Legal</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <span class="filter-label">Level</span>
+            <button class="pill active" data-filter="tenure" data-value="all" onclick="setPill(this,'tenure')">All</button>
+            <button class="pill" data-filter="tenure" data-value="0-1" onclick="setPill(this,'tenure')">A1–A2</button>
+            <button class="pill" data-filter="tenure" data-value="1-3" onclick="setPill(this,'tenure')">B1</button>
+            <button class="pill" data-filter="tenure" data-value="3-5" onclick="setPill(this,'tenure')">B2</button>
+            <button class="pill" data-filter="tenure" data-value="5+" onclick="setPill(this,'tenure')">C1+</button>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-title">Top fluency challenge areas</div>
+            <div class="card-sub">Q1: Areas where participants struggled most</div>
+            <div class="legend">
+              <span><span class="legend-dot" style="background:#378ADD"></span>2023</span>
+              <span><span class="legend-dot" style="background:#B5D4F4;outline:1px dashed #378ADD"></span>2024</span>
+            </div>
+            <div class="chart-wrap" style="height:240px"><canvas id="c1"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Proficiency by department</div>
+            <div class="card-sub">Average fluency scores by team</div>
+            <div class="legend">
+              <span><span class="legend-dot" style="background:#1D9E75"></span>2023</span>
+              <span><span class="legend-dot" style="background:#9FE1CB;outline:1px dashed #1D9E75"></span>2024</span>
+            </div>
+            <div class="chart-wrap" style="height:240px"><canvas id="c2"></canvas></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-title">Monthly assessment trend</div>
+            <div class="card-sub">Sessions completed per month, 2023 vs 2024</div>
+            <div class="legend">
+              <span><span class="legend-dot" style="background:#7F77DD"></span>2023</span>
+              <span><span class="legend-dot" style="background:#CECBF6;outline:1px dashed #7F77DD"></span>2024</span>
+            </div>
+            <div class="chart-wrap" style="height:200px"><canvas id="c3"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Communication skill scores</div>
+            <div class="card-sub">% rating "proficient" across dimensions</div>
+            <div class="chart-wrap" style="height:200px"><canvas id="c4"></canvas></div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="card">
+            <div class="card-title">Assessment experience ratings</div>
+            <div class="card-sub">% rating "good" or "excellent"</div>
+            <div class="chart-wrap" style="height:210px"><canvas id="c5"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Learning goals identified</div>
+            <div class="card-sub">Top themes from open responses</div>
+            <div class="chart-wrap" style="height:210px"><canvas id="c6"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Proficiency distribution</div>
+          <div class="card-sub">CEFR-equivalent level breakdown of assessed participants</div>
+          <div class="workload-bar" id="workload-bar">
+            <div class="wl-seg" style="width:12%;background:#DC2626;">A1 12%</div>
+            <div class="wl-seg" style="width:21%;background:#D97706;">A2 21%</div>
+            <div class="wl-seg" style="width:33%;background:#2563EB;">B1 33%</div>
+            <div class="wl-seg" style="width:22%;background:#16A34A;">B2 22%</div>
+            <div class="wl-seg" style="width:12%;background:#1D9E75;">C1+ 12%</div>
+          </div>
+          <p id="workload-note" style="font-size:11px;color:#2563EB;">34% achieved B2+ proficiency — highest in Product & Engineering (48%) and Finance (41%)</p>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title" style="margin-bottom:14px;">Actionable insights</div>
+          <div class="insight-grid">
+            <div class="insight red">
+              <div class="insight-title">Writing fluency gap</div>
+              <p>41% struggle with written expression. Scores 12pp below verbal fluency. Structured writing workshops recommended across Operations and Customer Success.</p>
+            </div>
+            <div class="insight red">
+              <div class="insight-title">Business vocabulary deficit</div>
+              <p>Only 38% demonstrate strong business vocabulary. Cross-functional communication is impacted. Domain-specific language training is high ROI.</p>
+            </div>
+            <div class="insight amber">
+              <div class="insight-title">Operations team gap</div>
+              <p>Avg score 58% — 14pp below company average. Fast-paced environment limits training time. Micro-learning format recommended.</p>
+            </div>
+            <div class="insight amber">
+              <div class="insight-title">Early career low scores</div>
+              <p>A1/A2 concentrated in 0–2 year tenure band. Onboarding language support needed for global hires joining local teams.</p>
+            </div>
+            <div class="insight blue">
+              <div class="insight-title">Listening comprehension strength</div>
+              <p>74% score proficient or above in listening. Strong base to build integrated communication skills on top of.</p>
+            </div>
+            <div class="insight green">
+              <div class="insight-title">Engagement is high</div>
+              <p>87% completion rate — 21pp above industry baseline for e-assessments. AI-conversational format is clearly driving engagement.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          Data basis: Illustrative figures modelled on global language assessment benchmarks for tech/e-commerce workforce profiles. CEFR level distributions based on sector-wide corporate assessment patterns. All figures are illustrative for demo purposes only and do not represent actual company data.
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──────────────────────────────
+// Auto-detect: use relative URLs when served by Express (localhost:3001 or production),
+// fall back to absolute when opened from a dev preview panel on a different port.
+const SERVER_URL = (window.location.hostname !== 'localhost' || window.location.port === '3001')
+  ? ''
+  : 'http://localhost:3001';
+
+// ── STATE ───────────────────────────────
+let userName      = '';
+let retellClient  = null;
+let callActive    = false;
+let isMuted       = false;
+let liveTranscript = [];
+
+// ── FEEDBACK QUESTIONS ───────────────────
+const feedbackQuestions = [
+  'How would you rate your overall assessment experience?',
+  'How natural and engaging was the AI agent during the conversation?',
+  'How comfortable did you feel expressing yourself in this format?',
+];
+
+// ── UTILS ───────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function getInitials(name) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+// ── STATUS ──────────────────────────────
+function setStatus(state) {
+  const dot  = document.getElementById('status-dot');
+  const txt  = document.getElementById('status-text');
+  const dots = document.getElementById('ai-dots');
+  const orb  = document.querySelector('.viz-orb');
+
+  dot.className  = 'status-dot';
+  dots.className = 'ai-dots';
+  if (orb) orb.classList.remove('speaking');
+
+  switch (state) {
+    case 'connecting':
+      txt.textContent = 'Connecting...';
+      dots.classList.add('thinking');
+      break;
+    case 'active':
+      dot.classList.add('active');
+      txt.textContent = 'Listening...';
+      dots.classList.add('active');
+      break;
+    case 'responding':
+      dot.classList.add('thinking');
+      txt.textContent = 'Tara is speaking...';
+      dots.classList.add('thinking');
+      if (orb) orb.classList.add('speaking');
+      break;
+    default: // idle
+      txt.textContent = 'Ready to begin';
+      dots.classList.add('idle');
+  }
+}
+
+// ── SCREEN 1: ENTRY ──────────────────────
+function proceedToSetup() {
+  const input = document.getElementById('input-name').value.trim();
+  if (!input) {
+    showToast('Please enter your name to continue.');
+    document.getElementById('input-name').focus();
+    return;
+  }
+  userName = input;
+  document.getElementById('setup-name-display').textContent = userName;
+  showScreen('screen-setup');
+}
+
+// ── SCREEN 2: SETUP ──────────────────────
+async function checkMicPermission() {
+  const badge = document.getElementById('mic-status-badge');
+  const btn   = document.getElementById('btn-check-mic');
+  btn.disabled    = true;
+  btn.textContent = 'Testing...';
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+    badge.textContent      = '● Microphone ready';
+    badge.style.color      = 'var(--green)';
+    btn.textContent        = '✓ Allowed';
+    btn.style.borderColor  = 'var(--green)';
+    btn.style.color        = 'var(--green)';
+  } catch (e) {
+    badge.textContent  = '⚠ Microphone blocked';
+    badge.style.color  = 'var(--red)';
+    btn.disabled       = false;
+    btn.textContent    = 'Retry';
+    showToast('Microphone access denied. Please allow it in your browser settings and try again.');
+  }
+}
+
+function proceedToInterview() {
+  document.getElementById('interview-session-label').textContent = 'AI Fluency Assessment';
+  showScreen('screen-interview');
+  setStatus('idle');
+}
+
+// ── SCREEN 3: VOICE CALL ─────────────────
+async function startCall() {
+  const btn = document.getElementById('btn-start-interview');
+  btn.disabled    = true;
+  btn.textContent = 'Connecting...';
+  setStatus('connecting');
+
+  try {
+    // Request microphone access upfront (before creating call)
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop()); // release — Retell SDK acquires it
+
+    // Get access token from server
+    const res = await fetch(`${SERVER_URL}/start-call`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_name: userName }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create call');
+    }
+    const { access_token } = await res.json();
+
+    // Initialise Retell client
+    const RetellSDK = window.RetellWebClient;
+    if (!RetellSDK) throw new Error('Retell SDK failed to load. Please refresh and try again.');
+    retellClient = new RetellSDK();
+    _wireRetellEvents();
+    await retellClient.startCall({ accessToken: access_token });
+
+  } catch (err) {
+    console.error(err);
+    if (err.name === 'NotAllowedError') {
+      showToast('Microphone access denied. Please allow it in browser settings and try again.');
+    } else {
+      showToast(err.message || 'Could not connect. Please try again.');
+    }
+    btn.disabled    = false;
+    btn.textContent = 'Start Call';
+    setStatus('idle');
+  }
+}
+
+function _wireRetellEvents() {
+  retellClient.on('call_started', () => {
+    callActive = true;
+    isMuted    = false;
+    setStatus('active');
+    document.getElementById('btn-start-interview').style.display = 'none';
+    document.getElementById('voice-controls').style.display = 'flex';
+    _updateMuteBtn();
+    // Clear placeholder
+    const body  = document.getElementById('transcript-body');
+    const empty = body.querySelector('.transcript-empty');
+    if (empty) empty.remove();
+  });
+
+  retellClient.on('call_ended', () => {
+    callActive = false;
+    setStatus('idle');
+    buildFeedbackQuestions();
+    showScreen('screen-feedback');
+  });
+
+  retellClient.on('agent_start_talking', () => {
+    setStatus('responding');
+    const hint = document.getElementById('voice-hint');
+    if (hint) hint.textContent = 'Tara is speaking...';
+  });
+
+  retellClient.on('agent_stop_talking', () => {
+    if (callActive) {
+      setStatus('active');
+      const hint = document.getElementById('voice-hint');
+      if (hint) hint.textContent = isMuted ? 'Microphone muted' : 'Speak naturally — Tara is listening';
+    }
+  });
+
+  retellClient.on('update', (update) => {
+    if (update.transcript) {
+      liveTranscript = update.transcript;
+      renderTranscript();
+    }
+  });
+
+  retellClient.on('error', (err) => {
+    console.error('Retell error:', err);
+    showToast('Call error occurred. Please try again.');
+    callActive = false;
+    setStatus('idle');
+    document.getElementById('btn-start-interview').style.display = '';
+    document.getElementById('btn-start-interview').disabled = false;
+    document.getElementById('btn-start-interview').textContent = 'Start Call';
+    document.getElementById('voice-controls').style.display = 'none';
+  });
+}
+
+function renderTranscript() {
+  const body = document.getElementById('transcript-body');
+
+  // Retell fires `update` very frequently (each word streamed).
+  // We diff against existing DOM nodes to avoid flicker/sway.
+  // CRITICAL: we also re-enforce the role class on every existing node because
+  // Retell can reorder or reclassify transcript entries during active streaming,
+  // which would leave a node visually on the wrong side until corrected.
+
+  const filtered     = liveTranscript.filter(e => e.content?.trim());
+  const existingNodes = Array.from(body.querySelectorAll('.chat-message'));
+  const atBottom     = body.scrollHeight - body.scrollTop - body.clientHeight < 80;
+
+  filtered.forEach((entry, i) => {
+    if (i < existingNodes.length) {
+      const node   = existingNodes[i];
+      const bubble = node.querySelector('.chat-bubble');
+      const label  = node.querySelector('.chat-label');
+
+      // Enforce correct side — role can change between updates during streaming
+      if (node.dataset.role !== entry.role) {
+        node.dataset.role  = entry.role;
+        node.className     = `chat-message ${entry.role}`;
+        if (bubble) bubble.className   = `chat-bubble ${entry.role}`;
+        if (label)  label.textContent  = entry.role === 'agent' ? 'Tara' : userName;
+      }
+
+      // Update text only when content changed
+      if (bubble && bubble.textContent !== entry.content) {
+        bubble.textContent = entry.content;
+      }
+    } else {
+      // Brand-new message — create once, animate in once
+      const wrap   = document.createElement('div');
+      wrap.className    = `chat-message ${entry.role}`;
+      wrap.dataset.role = entry.role;   // stored so role-change detection works above
+
+      const label  = document.createElement('div');
+      label.className   = 'chat-label';
+      label.textContent = entry.role === 'agent' ? 'Tara' : userName;
+
+      const bubble = document.createElement('div');
+      bubble.className   = `chat-bubble ${entry.role}`;
+      bubble.textContent = entry.content;
+
+      wrap.appendChild(label);
+      wrap.appendChild(bubble);
+      body.appendChild(wrap);
+    }
+  });
+
+  if (atBottom) body.scrollTop = body.scrollHeight;
+}
+
+function toggleMute() {
+  if (!retellClient || !callActive) return;
+  isMuted = !isMuted;
+  try {
+    if (isMuted) {
+      retellClient.mute();
+    } else {
+      retellClient.unmute();
+    }
+  } catch (e) {
+    // SDK may not expose mute/unmute directly in all versions — fail gracefully
+    console.warn('Mute toggle not available:', e.message);
+  }
+  _updateMuteBtn();
+  const hint = document.getElementById('voice-hint');
+  if (hint) hint.textContent = isMuted ? 'Microphone muted' : 'Speak naturally — Tara is listening';
+}
+
+function _updateMuteBtn() {
+  const btn = document.getElementById('btn-mute');
+  if (!btn) return;
+  if (isMuted) {
+    btn.classList.add('muted');
+    btn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>
+      </svg>
+      Unmute`;
+  } else {
+    btn.classList.remove('muted');
+    btn.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+      </svg>
+      Mute Mic`;
+  }
+}
+
+// ── END SESSION ──────────────────────────
+function requestEndInterview() {
+  document.getElementById('end-modal').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('end-modal').classList.remove('open');
+}
+function confirmEnd() {
+  closeModal();
+  if (retellClient && callActive) {
+    retellClient.stopCall(); // triggers call_ended → goes to feedback automatically
+  } else {
+    callActive = false;
+    buildFeedbackQuestions();
+    showScreen('screen-feedback');
+  }
+}
+
+// ── SCREEN 4: FEEDBACK ───────────────────
+function buildFeedbackQuestions() {
+  const container = document.getElementById('feedback-questions');
+  container.innerHTML = '';
+  feedbackQuestions.forEach((q, qi) => {
+    const div = document.createElement('div');
+    div.className = 'feedback-question';
+    div.innerHTML = `
+      <p>${q}</p>
+      <div class="stars">
+        ${[1,2,3,4,5].map(s =>
+          `<span class="star" data-q="${qi}" data-v="${s}" onclick="rateStar(${qi},${s})">★</span>`
+        ).join('')}
+      </div>`;
+    container.appendChild(div);
+    if (qi < feedbackQuestions.length - 1) {
+      container.insertAdjacentHTML('beforeend', '<hr class="feedback-divider"/>');
+    }
+  });
+}
+
+function rateStar(qIndex, value) {
+  document.querySelectorAll(`.star[data-q="${qIndex}"]`).forEach(star => {
+    star.classList.toggle('active', parseInt(star.dataset.v) <= value);
+  });
+}
+
+function submitFeedback() {
+  document.getElementById('thankyou-name').textContent = userName.split(' ')[0];
+  showScreen('screen-thankyou');
+}
+
+// ── DASHBOARD DATA ────────────────────────
+const dashboardData = {
+  'all': {
+    '2023': { reasons:[31,26,17,15,13,10], deptAttrition:[20,17,15,11,8,7], monthly:[58,62,81,70,65,72,68,75,88,64,59,54], supervisor:[67,58,52,44,39,31], jobRatings:[61,48,44,41,38,29], newJobOffers:[41,38,29,22,18,12], workload:[12,21,33,22,12], kpis:{exits:880,attrition:'70%',tenure:'18 min',completion:'85%',safety:31} },
+    '2024': { reasons:[34,28,19,17,14,11], deptAttrition:[22,18,16,12,9,8], monthly:[62,66,85,74,70,78,72,80,92,68,63,57], supervisor:[67,58,52,44,39,31], jobRatings:[61,48,44,41,38,29], newJobOffers:[41,38,29,22,18,12], workload:[12,21,33,22,12], kpis:{exits:967,attrition:'74%',tenure:'18 min',completion:'89%',safety:37} }
+  },
+  'ground-ops': {
+    '2023': { reasons:[28,22,15,21,11,8], deptAttrition:[20,17,15,11,8,7], monthly:[11,12,16,14,13,14,13,15,17,13,12,11], supervisor:[65,52,48,40,35,25], jobRatings:[55,42,40,38,32,24], newJobOffers:[38,44,22,18,15,14], workload:[18,28,32,16,6], kpis:{exits:220,attrition:'58%',tenure:'17 min',completion:'81%',safety:22} },
+    '2024': { reasons:[30,24,16,23,12,9], deptAttrition:[22,18,16,12,9,8], monthly:[12,13,18,15,14,15,14,17,19,14,13,12], supervisor:[66,53,49,41,36,26], jobRatings:[56,43,41,39,33,25], newJobOffers:[39,46,23,19,16,14], workload:[16,25,34,18,7], kpis:{exits:242,attrition:'62%',tenure:'17 min',completion:'84%',safety:26} }
+  },
+  'cabin-crew': {
+    '2023': { reasons:[27,32,18,16,13,9], deptAttrition:[20,17,15,11,8,7], monthly:[10,11,14,12,11,13,12,13,16,11,10,10], supervisor:[68,57,51,43,38,29], jobRatings:[59,45,43,39,36,27], newJobOffers:[35,42,34,20,17,11], workload:[11,20,35,24,10], kpis:{exits:190,attrition:'71%',tenure:'19 min',completion:'87%',safety:33} },
+    '2024': { reasons:[29,35,20,18,14,10], deptAttrition:[22,18,16,12,9,8], monthly:[11,12,15,13,12,14,13,15,17,12,11,11], supervisor:[69,58,52,44,39,30], jobRatings:[60,46,44,40,37,28], newJobOffers:[36,44,36,21,18,12], workload:[10,19,34,25,12], kpis:{exits:209,attrition:'75%',tenure:'19 min',completion:'90%',safety:36} }
+  },
+  'customer-service': {
+    '2023': { reasons:[33,25,20,14,12,10], deptAttrition:[20,17,15,11,8,7], monthly:[9,10,13,11,10,12,11,12,15,10,9,9], supervisor:[66,57,51,43,38,30], jobRatings:[60,47,43,40,37,28], newJobOffers:[40,37,30,22,19,11], workload:[10,18,34,25,13], kpis:{exits:157,attrition:'76%',tenure:'20 min',completion:'91%',safety:40} },
+    '2024': { reasons:[35,27,22,15,13,11], deptAttrition:[22,18,16,12,9,8], monthly:[10,11,14,12,11,13,12,13,16,11,10,10], supervisor:[67,58,52,44,39,31], jobRatings:[61,48,44,41,38,29], newJobOffers:[41,38,31,23,20,12], workload:[9,16,32,27,16], kpis:{exits:173,attrition:'80%',tenure:'20 min',completion:'93%',safety:44} }
+  },
+  'engineering': {
+    '2023': { reasons:[36,24,16,12,14,12], deptAttrition:[20,17,15,11,8,7], monthly:[7,7,9,8,8,8,8,9,10,7,7,6], supervisor:[69,60,54,46,42,34], jobRatings:[63,50,46,43,40,32], newJobOffers:[44,36,26,24,16,10], workload:[9,17,30,27,17], kpis:{exits:115,attrition:'78%',tenure:'21 min',completion:'92%',safety:43} },
+    '2024': { reasons:[38,26,18,13,15,13], deptAttrition:[22,18,16,12,9,8], monthly:[8,8,10,9,9,9,9,10,11,8,8,7], supervisor:[70,61,55,47,43,35], jobRatings:[64,51,47,44,41,33], newJobOffers:[46,38,27,25,17,11], workload:[8,14,28,29,21], kpis:{exits:128,attrition:'82%',tenure:'21 min',completion:'94%',safety:48} }
+  },
+  'corporate': {
+    '2023': { reasons:[38,20,14,10,15,16], deptAttrition:[20,17,15,11,8,7], monthly:[5,5,7,6,5,6,5,6,7,5,5,4], supervisor:[72,65,60,50,48,40], jobRatings:[67,54,52,48,46,38], newJobOffers:[46,32,36,28,14,8], workload:[8,15,31,28,18], kpis:{exits:83,attrition:'80%',tenure:'19 min',completion:'90%',safety:41} },
+    '2024': { reasons:[40,22,15,11,16,18], deptAttrition:[22,18,16,12,9,8], monthly:[5,6,8,7,6,7,6,7,8,6,6,5], supervisor:[73,66,61,51,49,41], jobRatings:[68,55,53,49,47,40], newJobOffers:[48,33,38,29,15,9], workload:[7,13,30,29,21], kpis:{exits:96,attrition:'83%',tenure:'19 min',completion:'92%',safety:44} }
+  },
+  'flight-ops': {
+    '2023': { reasons:[30,28,19,13,12,11], deptAttrition:[20,17,15,11,8,7], monthly:[4,5,6,5,5,5,5,6,7,5,4,4], supervisor:[67,57,51,43,38,30], jobRatings:[60,46,43,40,37,27], newJobOffers:[40,40,26,20,17,12], workload:[14,22,33,20,11], kpis:{exits:72,attrition:'65%',tenure:'18 min',completion:'83%',safety:28} },
+    '2024': { reasons:[32,30,21,14,13,12], deptAttrition:[22,18,16,12,9,8], monthly:[5,5,7,6,6,6,6,7,8,5,5,5], supervisor:[68,58,52,44,39,31], jobRatings:[61,47,44,41,38,28], newJobOffers:[41,42,27,21,18,13], workload:[13,20,32,22,13], kpis:{exits:84,attrition:'69%',tenure:'18 min',completion:'86%',safety:32} }
+  }
+};
+
+const tenureMultipliers = {
+  'all': [1.0,1.0,1.0,1.0,1.0,1.0],
+  '0-1': [0.7,0.9,1.0,1.3,1.5,0.8],
+  '1-3': [1.3,1.0,1.3,1.0,0.9,0.8],
+  '3-5': [1.0,1.3,1.0,0.9,0.8,1.3],
+  '5+':  [0.8,1.1,0.9,0.8,1.0,1.6]
+};
+
+let activeYear   = 'both';
+let activeTenure = 'all';
+
+function setPill(btn, group) {
+  document.querySelectorAll(`.pill[data-filter="${group}"]`).forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  if (group === 'year')   activeYear   = btn.dataset.value;
+  if (group === 'tenure') activeTenure = btn.dataset.value;
+  applyFilters();
+}
+
+function _avgArr(a, b) { return a.map((v,i) => Math.round((v+b[i])/2)); }
+
+function _getSlice(dept, year) {
+  const d = dashboardData[dept];
+  if (year === 'both') {
+    const a=d['2023'], b=d['2024'];
+    return {
+      reasons:       _avgArr(a.reasons,b.reasons),
+      deptAttrition: _avgArr(a.deptAttrition,b.deptAttrition),
+      monthly:       _avgArr(a.monthly,b.monthly),
+      supervisor:    _avgArr(a.supervisor,b.supervisor),
+      jobRatings:    _avgArr(a.jobRatings,b.jobRatings),
+      newJobOffers:  _avgArr(a.newJobOffers,b.newJobOffers),
+      workload:      _avgArr(a.workload,b.workload),
+      kpis:{ exits:a.kpis.exits+b.kpis.exits, attrition:a.kpis.attrition, tenure:a.kpis.tenure, completion:a.kpis.completion, safety:a.kpis.safety+b.kpis.safety }
+    };
+  }
+  return d[year];
+}
+
+function _applyTenure(reasons, tenure) {
+  const m   = tenureMultipliers[tenure];
+  const raw = reasons.map((v,i) => Math.max(1, Math.round(v*m[i])));
+  const origSum = reasons.reduce((a,b)=>a+b,0);
+  const rawSum  = raw.reduce((a,b)=>a+b,0);
+  return raw.map(v => Math.round(v*origSum/rawSum));
+}
+
+function applyFilters() {
+  const dept  = document.getElementById('dept-filter').value;
+  const slice = _getSlice(dept, activeYear);
+  const reasons = _applyTenure(slice.reasons, activeTenure);
+  const tc='rgba(0,0,0,0.45)', gc='rgba(0,0,0,0.06)';
+  const hOpts=(ax)=>({indexAxis:ax||'x',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.parsed[ax==='y'?'x':'y']+'%'}}},scales:{x:{ticks:{color:tc,font:{size:11}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}});
+
+  ['c1','c2','c3','c4','c5','c6'].forEach(id=>{ const c=Chart.getChart(id); if(c) c.destroy(); });
+
+  const is23=activeYear==='2023', isBoth=activeYear==='both';
+
+  const c1ds = isBoth
+    ? [{label:'Both',data:reasons,backgroundColor:'#378ADD',borderRadius:3}]
+    : is23
+      ? [{label:'2023',data:reasons,backgroundColor:'#378ADD',borderRadius:3}]
+      : [{label:'2024',data:reasons,backgroundColor:'#B5D4F4',borderWidth:1,borderColor:'#378ADD',borderRadius:3}];
+  new Chart(document.getElementById('c1'),{type:'bar',data:{labels:['Writing fluency','Business vocabulary','Listening accuracy','Pronunciation','Grammar usage','Reading speed'],datasets:c1ds},options:{...hOpts('y'),scales:{x:{ticks:{color:tc,font:{size:11},callback:v=>v+'%'},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
+
+  const c2a=dashboardData[dept]['2023'].deptAttrition, c2b=dashboardData[dept]['2024'].deptAttrition;
+  const c2ds = isBoth
+    ? [{label:'2023',data:c2a,backgroundColor:'#1D9E75',borderRadius:3},{label:'2024',data:c2b,backgroundColor:'#9FE1CB',borderWidth:1,borderColor:'#1D9E75',borderRadius:3}]
+    : is23
+      ? [{label:'2023',data:c2a,backgroundColor:'#1D9E75',borderRadius:3}]
+      : [{label:'2024',data:c2b,backgroundColor:'#9FE1CB',borderWidth:1,borderColor:'#1D9E75',borderRadius:3}];
+  new Chart(document.getElementById('c2'),{type:'bar',data:{labels:['Operations','Customer Success','Product & Eng','Marketing','Finance','HR & Legal'],datasets:c2ds},options:{...hOpts('y'),scales:{x:{ticks:{color:tc,font:{size:11},callback:v=>v+'%'},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
+
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const c3a=dashboardData[dept]['2023'].monthly, c3b=dashboardData[dept]['2024'].monthly;
+  const c3ds = isBoth
+    ? [{label:'2023',data:c3a,borderColor:'#7F77DD',backgroundColor:'transparent',tension:0.4,pointRadius:3,borderDash:[]},{label:'2024',data:c3b,borderColor:'#CECBF6',backgroundColor:'transparent',tension:0.4,pointRadius:3,borderDash:[4,3]}]
+    : is23
+      ? [{label:'2023',data:c3a,borderColor:'#7F77DD',backgroundColor:'transparent',tension:0.4,pointRadius:3}]
+      : [{label:'2024',data:c3b,borderColor:'#CECBF6',backgroundColor:'transparent',tension:0.4,pointRadius:3,borderDash:[4,3]}];
+  new Chart(document.getElementById('c3'),{type:'line',data:{labels:mo,datasets:c3ds},options:{...hOpts('x'),scales:{x:{ticks:{color:tc,font:{size:10},autoSkip:false,maxRotation:0},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
+
+  new Chart(document.getElementById('c4'),{type:'bar',data:{labels:['Oral fluency','Written clarity','Active listening','Professional vocab','Email writing','Presentation skills'],datasets:[{label:'Proficient %',data:slice.supervisor,backgroundColor:['#1D9E75','#378ADD','#378ADD','#D97706','#D97706','#DC2626'],borderRadius:3}]},options:{...hOpts('y'),scales:{x:{min:0,max:100,ticks:{color:tc,font:{size:11},callback:v=>v+'%'},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
+
+  new Chart(document.getElementById('c5'),{type:'bar',data:{labels:['Session comfort','Question relevance','AI naturalness','Interface clarity','Overall experience','Would recommend'],datasets:[{label:'Good/Excellent %',data:slice.jobRatings,backgroundColor:'#7F77DD',borderRadius:3}]},options:{...hOpts('y'),scales:{x:{min:0,max:100,ticks:{color:tc,font:{size:11},callback:v=>v+'%'},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
+
+  new Chart(document.getElementById('c6'),{type:'bar',data:{labels:['Business writing','Presentation skills','Technical vocab','Customer comms','Cross-cultural','Negotiation'],datasets:[{label:'% mentions',data:slice.newJobOffers,backgroundColor:'#D85A30',borderRadius:3}]},options:{...hOpts('y'),scales:{x:{ticks:{color:tc,font:{size:11},callback:v=>v+'%'},grid:{color:gc}},y:{ticks:{color:tc,font:{size:11}},grid:{color:gc}}}}});
+
+  const wl=slice.workload;
+  document.getElementById('workload-note').textContent = `${wl[2]+wl[3]+wl[4]}% achieved B1 or above proficiency`;
+
+  const k=slice.kpis;
+  document.getElementById('kpi-exits').textContent      = Number(k.exits).toLocaleString();
+  document.getElementById('kpi-attrition').textContent  = k.attrition;
+  document.getElementById('kpi-tenure').textContent     = k.tenure;
+  document.getElementById('kpi-completion').textContent = k.completion;
+  document.getElementById('kpi-safety').textContent     = k.safety + '%';
+}
+
+// ── DASHBOARD OPEN/CLOSE ──────────────────
+function openDashboard() {
+  activeYear = 'both'; activeTenure = 'all';
+  document.querySelectorAll('.pill[data-filter="year"]').forEach(p => p.classList.toggle('active', p.dataset.value==='both'));
+  document.querySelectorAll('.pill[data-filter="tenure"]').forEach(p => p.classList.toggle('active', p.dataset.value==='all'));
+  document.getElementById('dept-filter').value = 'all';
+  document.getElementById('dashboard-modal').style.display = 'flex';
+  applyFilters();
+}
+
+function closeDashboard() {
+  document.getElementById('dashboard-modal').style.display = 'none';
+  ['c1','c2','c3','c4','c5','c6'].forEach(id => { const c=Chart.getChart(id); if(c) c.destroy(); });
+}
+
+// ── KEYBOARD SHORTCUTS ────────────────────
+document.getElementById('input-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') proceedToSetup();
+});
+
+// Close dashboard on backdrop click
+document.getElementById('dashboard-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDashboard();
+});
+
+// ── INIT ─────────────────────────────────
+buildFeedbackQuestions();
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "fluency-agent",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "postinstall": "node build.mjs",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "esbuild": "^0.20.0",
+    "express": "^4.19.2",
+    "retell-client-js-sdk": "^2.0.0"
+  }
+}
